@@ -45,6 +45,7 @@
         <jackson.version>2.10.1</jackson.version>
         <aws.version>1.12.313</aws.version>
         <clickhouse.jdbc.version>0.3.2-patch7</clickhouse.jdbc.version>
+        <tidb.jdbc.version>8.0.29-tidb-1.0.0</tidb.jdbc.version>
     </properties>
 
     <dependencies>
@@ -116,6 +117,11 @@
                     <artifactId>slf4j-api</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.github.lastincisor</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${tidb.jdbc.version}</version>
         </dependency>
     </dependencies>
     <build>
