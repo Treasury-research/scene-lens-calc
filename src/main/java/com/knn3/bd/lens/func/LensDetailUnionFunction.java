@@ -5,6 +5,7 @@ import com.knn3.bd.lens.cons.Cons;
 import com.knn3.bd.lens.model.DataWrapper;
 import com.knn3.bd.lens.model.LensBroadModel;
 import com.knn3.bd.lens.model.LensDetail;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.streaming.api.functions.co.BroadcastProcessFunction;
 import org.apache.flink.util.Collector;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
  * @Time 2022/12/20 12:51
  * @Description 工程描述
  */
+@Slf4j
 public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail, DataWrapper, LensDetail> {
     private final MapStateDescriptor<String, List<LensBroadModel>> broadcastDescriptor;
 
@@ -97,23 +99,28 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
 
     @Override
     public void processBroadcastElement(DataWrapper wrapper, BroadcastProcessFunction<LensDetail, DataWrapper, LensDetail>.Context context, Collector<LensDetail> collector) throws Exception {
-        String type = wrapper.getType();
-        ObjectNode node = wrapper.getData();
-        LensBroadModel model;
-        switch (type) {
-            case Cons.CURRENCY:
-                model = ofCurrency(node);
-                break;
-            case Cons.TREASURY:
-                model = ofTreasury(node);
-                break;
-            default:
-                model = ofTreasuryFee(node);
+        try {
+            String type = wrapper.getType();
+            ObjectNode node = wrapper.getData();
+            LensBroadModel model;
+            switch (type) {
+                case Cons.CURRENCY:
+                    model = ofCurrency(node);
+                    break;
+                case Cons.TREASURY:
+                    model = ofTreasury(node);
+                    break;
+                default:
+                    model = ofTreasuryFee(node);
+            }
+            List<LensBroadModel> modelList = Optional.ofNullable(context.getBroadcastState(this.broadcastDescriptor).get(type))
+                    .orElseGet(ArrayList::new);
+            modelList.add(model);
+            modelList.sort(Comparator.comparing(x -> x.getTimestamp() * -1));
+            context.getBroadcastState(this.broadcastDescriptor).put(type, modelList);
+        } catch (Exception e) {
+            log.error("LensDetailUnionFunction,data={}", wrapper);
+            log.error("LensDetailUnionFunction", e);
         }
-        List<LensBroadModel> modelList = Optional.ofNullable(context.getBroadcastState(this.broadcastDescriptor).get(type))
-                .orElseGet(ArrayList::new);
-        modelList.add(model);
-        modelList.sort(Comparator.comparing(x -> x.getTimestamp() * -1));
-        context.getBroadcastState(this.broadcastDescriptor).put(type, modelList);
     }
 }

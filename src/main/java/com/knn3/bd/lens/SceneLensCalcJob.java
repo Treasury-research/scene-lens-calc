@@ -122,8 +122,6 @@ public class SceneLensCalcJob {
                 )
                 .process(new LensDetailUnionFunction(broadcastDescriptor)).name("BroadUnion").uid("BroadUnion");
 
-        outDs.print();
-
         outDs.addSink(JdbcSink.sink(
                 PG_INSERT,
                 (statement, lens) -> {
@@ -154,7 +152,7 @@ public class SceneLensCalcJob {
                 },
                 jdbcExecutionOptions,
                 pgJdbcConnectionOptions
-        ));
+        )).name("SinkPg").uid("SinkPg");
         outDs.addSink(JdbcSink.sink(
                 TIDB_INSERT,
                 (statement, lens) -> {
@@ -207,7 +205,7 @@ public class SceneLensCalcJob {
                 },
                 jdbcExecutionOptions,
                 tidbJdbcConnectionOptions
-        ));
+        )).name("SinkTidb").uid("SinkTidb");
 
 
         env.execute(jobName);
