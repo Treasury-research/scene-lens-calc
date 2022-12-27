@@ -78,8 +78,10 @@ public class SceneLensCalcJob {
         // polygon_lens_treasury_fee "UQ_c51d3ddb9f9c124c186db75a09b" UNIQUE CONSTRAINT, btree ("transactionHash", "logIndex")
         // polygon_lens_collect "UQ_bd7051c1920ef3b34a5123ed5e3" UNIQUE CONSTRAINT, btree ("transactionHash", "logIndex")
         // polygon_lens_publication "UQ_2495eaf75f154e2a9f9908d7469" UNIQUE CONSTRAINT, btree ("profileId", "pubId")
-        OutputTag<LensPublication> pubTag = new OutputTag<>("polygon_lens_publication");
-        OutputTag<LensCollect> collectTag = new OutputTag<>("polygon_lens_collect");
+        OutputTag<LensPublication> pubTag = new OutputTag<LensPublication>("polygon_lens_publication") {
+        };
+        OutputTag<LensCollect> collectTag = new OutputTag<LensCollect>("polygon_lens_collect") {
+        };
 
         MapStateDescriptor<String, List<LensBroadModel>> broadcastDescriptor = new MapStateDescriptor<>("BroadcastDescriptor", TypeInformation.of(String.class), TypeInformation.of(new TypeHint<List<LensBroadModel>>() {
         }));
