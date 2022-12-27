@@ -15,7 +15,3 @@ echo "当前时间: ${now} *** 进入 ${filepath} 目录"
 # here put the import lib
 git pull origin main
 mvn clean package -Dmaven.test.skip=true
-aws s3 cp "${project_path}"/scene-lens-calc/target/scene-lens-calc-jar-with-dependencies.jar "${s3_path}"/scene-lens-calc-jar-with-dependencies.jar
-echo "上传到scene-lens-calc-jar-with-dependencies.jar到${s3_path}"
-aws s3 cp "${project_path}"/scene-lens-calc/src/main/resources/SceneLensCalcJob.sh "${s3_path}"/SceneLensCalcJob.sh
-echo "上传到SceneLensCalcJob.sh到${s3_path}"
