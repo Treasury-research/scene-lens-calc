@@ -52,10 +52,10 @@ public class LensDupFunction extends KeyedProcessFunction<String, Tuple2<String,
         this.hashIdxMapState.put(t.f0, 0);
         String type = t.f1.getType();
         if (type.equalsIgnoreCase(Cons.PUBLICATION))
-            context.output(this.pubTag, Json.MAPPER.readValue(t.f1.toString(), new TypeReference<LensPublication>() {
+            context.output(this.pubTag, Json.MAPPER.readValue(t.f1.getData().toString(), new TypeReference<LensPublication>() {
             }));
         else if (type.equalsIgnoreCase(Cons.COLLECT))
-            context.output(this.collectTag, Json.MAPPER.readValue(t.f1.toString(), new TypeReference<LensCollect>() {
+            context.output(this.collectTag, Json.MAPPER.readValue(t.f1.getData().toString(), new TypeReference<LensCollect>() {
             }));
         else collector.collect(t.f1);
     }
