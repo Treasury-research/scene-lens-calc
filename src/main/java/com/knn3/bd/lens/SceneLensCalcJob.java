@@ -11,6 +11,7 @@ import com.knn3.bd.rt.Job;
 import com.knn3.bd.rt.connector.kafka.KafkaSchema;
 import com.knn3.bd.rt.connector.kafka.SourceModel;
 import com.knn3.bd.rt.model.EnvConf;
+import com.knn3.bd.rt.service.JdbcService;
 import com.knn3.bd.rt.utils.JDBCUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.state.MapStateDescriptor;
@@ -19,6 +20,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
+import org.apache.flink.connector.jdbc.JdbcSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -36,6 +38,9 @@ import java.util.Optional;
  * @Description 工程描述
  */
 public class SceneLensCalcJob {
+    private static final String PG_INSERT = "INSERT INTO polygon_lens_detail (collector,pub_type,pro_id,pub_id,root_pro_id,root_pub_id,fee_type,recipient_type,blk_num,hash,log_idx,idx,mirr_addr,timestamp,amount,currency,\"referralFee\",origin_addr,decimals,pform_addr,pform_rate,plt_amount,mirr_amount,origin_amount) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (pro_id, hash,log_idx) DO NOTHING";
+    private static final String TIDB_INSERT = "INSERT INTO polygon_lens_detail (collector,pub_type,pro_id,pub_id,root_pro_id,root_pub_id,fee_type,recipient_type,blk_num,hash,log_idx,idx,mirr_addr,timestamp,amount,currency,`referralFee`,origin_addr,decimals,pform_addr,pform_rate,plt_amount,mirr_amount,origin_amount) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE collector = ?,pub_type = ?,pub_id = ?,root_pro_id = ?,root_pub_id = ?,fee_type = ?,recipient_type = ?,blk_num = ?,idx = ?,mirr_addr = ?,timestamp = ?,amount = ?,currency = ?,`referralFee` = ?,origin_addr = ?,decimals = ?,pform_addr = ?,pform_rate = ?,plt_amount = ?,mirr_amount = ?,origin_amount = ?";
+
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = Job.getEnv(args);
         int p = env.getParallelism();
@@ -117,44 +122,90 @@ public class SceneLensCalcJob {
 
         outDs.print();
 
-        // outDs.addSink(JdbcSink.sink(
-        //         "Cons.SQL_NFT_TOKEN_HOLD_RT",
-        //         (statement, hold) -> {
-        //             String dt = hold.getBlockDate();
-        //             String tokenType = hold.getTable();
-        //             String address = hold.getAddress();
-        //             String contract = hold.getContract();
-        //             BigInteger count = TransService.strToBigInt(hold.getCount());
-        //
-        //             JdbcService.setString(1, statement, dt);
-        //             JdbcService.setString(2, statement, tokenType);
-        //             JdbcService.setString(3, statement, address);
-        //             JdbcService.setString(4, statement, contract);
-        //             JdbcService.setObject(5, statement, count);
-        //             JdbcService.setObject(6, statement, count);
-        //         },
-        //         jdbcExecutionOptions,
-        //         pgJdbcConnectionOptions
-        // ));
-        // outDs.addSink(JdbcSink.sink(
-        //         "Cons.SQL_NFT_TOKEN_HOLD_RT",
-        //         (statement, hold) -> {
-        //             String dt = hold.getBlockDate();
-        //             String tokenType = hold.getTable();
-        //             String address = hold.getAddress();
-        //             String contract = hold.getContract();
-        //             BigInteger count = TransService.strToBigInt(hold.getCount());
-        //
-        //             JdbcService.setString(1, statement, dt);
-        //             JdbcService.setString(2, statement, tokenType);
-        //             JdbcService.setString(3, statement, address);
-        //             JdbcService.setString(4, statement, contract);
-        //             JdbcService.setObject(5, statement, count);
-        //             JdbcService.setObject(6, statement, count);
-        //         },
-        //         jdbcExecutionOptions,
-        //         tidbJdbcConnectionOptions
-        // ));
+        outDs.addSink(JdbcSink.sink(
+                PG_INSERT,
+                (statement, lens) -> {
+                    JdbcService.setString(1, statement, lens.getCollector());
+                    JdbcService.setString(2, statement, lens.getPubType());
+                    JdbcService.setString(3, statement, lens.getProId());
+                    JdbcService.setString(4, statement, lens.getPubId());
+                    JdbcService.setString(5, statement, lens.getRootProId());
+                    JdbcService.setString(6, statement, lens.getRootPubId());
+                    JdbcService.setInt(7, statement, lens.getFeeType());
+                    JdbcService.setInt(8, statement, lens.getRecipientType());
+                    JdbcService.setObject(9, statement, lens.getBlkNum());
+                    JdbcService.setString(10, statement, lens.getHash());
+                    JdbcService.setInt(11, statement, lens.getLogIdx());
+                    JdbcService.setInt(12, statement, lens.getIdx());
+                    JdbcService.setString(13, statement, lens.getMirAddr());
+                    JdbcService.setString(14, statement, lens.getTimestamp());
+                    JdbcService.setString(15, statement, lens.getAmount());
+                    JdbcService.setString(16, statement, lens.getCurrency());
+                    JdbcService.setObject(17, statement, lens.getReferralFee());
+                    JdbcService.setString(18, statement, lens.getOriginAddr());
+                    JdbcService.setInt(19, statement, lens.getDecimals());
+                    JdbcService.setString(20, statement, lens.getPlatAddr());
+                    JdbcService.setObject(21, statement, lens.getPlatRate());
+                    JdbcService.setDouble(22, statement, lens.getPlatAmount());
+                    JdbcService.setDouble(23, statement, lens.getMirAmount());
+                    JdbcService.setDouble(24, statement, lens.getOriginAmount());
+                },
+                jdbcExecutionOptions,
+                pgJdbcConnectionOptions
+        ));
+        outDs.addSink(JdbcSink.sink(
+                TIDB_INSERT,
+                (statement, lens) -> {
+                    JdbcService.setString(1, statement, lens.getCollector());
+                    JdbcService.setString(2, statement, lens.getPubType());
+                    JdbcService.setString(3, statement, lens.getProId());
+                    JdbcService.setString(4, statement, lens.getPubId());
+                    JdbcService.setString(5, statement, lens.getRootProId());
+                    JdbcService.setString(6, statement, lens.getRootPubId());
+                    JdbcService.setInt(7, statement, lens.getFeeType());
+                    JdbcService.setInt(8, statement, lens.getRecipientType());
+                    JdbcService.setObject(9, statement, lens.getBlkNum());
+                    JdbcService.setString(10, statement, lens.getHash());
+                    JdbcService.setInt(11, statement, lens.getLogIdx());
+                    JdbcService.setInt(12, statement, lens.getIdx());
+                    JdbcService.setString(13, statement, lens.getMirAddr());
+                    JdbcService.setString(14, statement, lens.getTimestamp());
+                    JdbcService.setString(15, statement, lens.getAmount());
+                    JdbcService.setString(16, statement, lens.getCurrency());
+                    JdbcService.setObject(17, statement, lens.getReferralFee());
+                    JdbcService.setString(18, statement, lens.getOriginAddr());
+                    JdbcService.setInt(19, statement, lens.getDecimals());
+                    JdbcService.setString(20, statement, lens.getPlatAddr());
+                    JdbcService.setObject(21, statement, lens.getPlatRate());
+                    JdbcService.setDouble(22, statement, lens.getPlatAmount());
+                    JdbcService.setDouble(23, statement, lens.getMirAmount());
+                    JdbcService.setDouble(24, statement, lens.getOriginAmount());
+
+                    JdbcService.setString(25, statement, lens.getCollector());
+                    JdbcService.setString(26, statement, lens.getPubType());
+                    JdbcService.setString(27, statement, lens.getPubId());
+                    JdbcService.setString(28, statement, lens.getRootProId());
+                    JdbcService.setString(29, statement, lens.getRootPubId());
+                    JdbcService.setInt(30, statement, lens.getFeeType());
+                    JdbcService.setInt(31, statement, lens.getRecipientType());
+                    JdbcService.setInt(32, statement, lens.getLogIdx());
+                    JdbcService.setInt(33, statement, lens.getIdx());
+                    JdbcService.setString(34, statement, lens.getMirAddr());
+                    JdbcService.setString(35, statement, lens.getTimestamp());
+                    JdbcService.setString(36, statement, lens.getAmount());
+                    JdbcService.setString(37, statement, lens.getCurrency());
+                    JdbcService.setObject(38, statement, lens.getReferralFee());
+                    JdbcService.setString(39, statement, lens.getOriginAddr());
+                    JdbcService.setInt(40, statement, lens.getDecimals());
+                    JdbcService.setString(41, statement, lens.getPlatAddr());
+                    JdbcService.setObject(42, statement, lens.getPlatRate());
+                    JdbcService.setDouble(43, statement, lens.getPlatAmount());
+                    JdbcService.setDouble(44, statement, lens.getMirAmount());
+                    JdbcService.setDouble(45, statement, lens.getOriginAmount());
+                },
+                jdbcExecutionOptions,
+                tidbJdbcConnectionOptions
+        ));
 
 
         env.execute(jobName);
