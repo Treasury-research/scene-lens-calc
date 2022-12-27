@@ -85,7 +85,7 @@ public class DataWrapper {
     private static class StringToJson extends JsonDeserializer<ObjectNode> {
         @Override
         public ObjectNode deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
-            return (ObjectNode) Json.MAPPER.readTree(jsonParser.getText());
+            return jsonParser.getCodec().readTree(jsonParser);
         }
     }
 
