@@ -127,10 +127,10 @@ public class SceneLensCalcJob {
                 (statement, lens) -> {
                     JdbcService.setString(1, statement, lens.getCollector());
                     JdbcService.setString(2, statement, lens.getPubType());
-                    JdbcService.setString(3, statement, lens.getProId());
-                    JdbcService.setString(4, statement, lens.getPubId());
-                    JdbcService.setString(5, statement, lens.getRootProId());
-                    JdbcService.setString(6, statement, lens.getRootPubId());
+                    JdbcService.setInt(3, statement, lens.getProId());
+                    JdbcService.setInt(4, statement, lens.getPubId());
+                    JdbcService.setInt(5, statement, lens.getRootProId());
+                    JdbcService.setInt(6, statement, lens.getRootPubId());
                     JdbcService.setInt(7, statement, lens.getFeeType());
                     JdbcService.setInt(8, statement, lens.getRecipientType());
                     JdbcService.setObject(9, statement, lens.getBlkNum());
@@ -158,10 +158,10 @@ public class SceneLensCalcJob {
                 (statement, lens) -> {
                     JdbcService.setString(1, statement, lens.getCollector());
                     JdbcService.setString(2, statement, lens.getPubType());
-                    JdbcService.setString(3, statement, lens.getProId());
-                    JdbcService.setString(4, statement, lens.getPubId());
-                    JdbcService.setString(5, statement, lens.getRootProId());
-                    JdbcService.setString(6, statement, lens.getRootPubId());
+                    JdbcService.setInt(3, statement, lens.getProId());
+                    JdbcService.setInt(4, statement, lens.getPubId());
+                    JdbcService.setInt(5, statement, lens.getRootProId());
+                    JdbcService.setInt(6, statement, lens.getRootPubId());
                     JdbcService.setInt(7, statement, lens.getFeeType());
                     JdbcService.setInt(8, statement, lens.getRecipientType());
                     JdbcService.setObject(9, statement, lens.getBlkNum());
@@ -183,9 +183,9 @@ public class SceneLensCalcJob {
 
                     JdbcService.setString(25, statement, lens.getCollector());
                     JdbcService.setString(26, statement, lens.getPubType());
-                    JdbcService.setString(27, statement, lens.getPubId());
-                    JdbcService.setString(28, statement, lens.getRootProId());
-                    JdbcService.setString(29, statement, lens.getRootPubId());
+                    JdbcService.setInt(27, statement, lens.getPubId());
+                    JdbcService.setInt(28, statement, lens.getRootProId());
+                    JdbcService.setInt(29, statement, lens.getRootPubId());
                     JdbcService.setInt(30, statement, lens.getFeeType());
                     JdbcService.setInt(31, statement, lens.getRecipientType());
                     JdbcService.setInt(32, statement, lens.getLogIdx());

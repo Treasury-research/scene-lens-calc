@@ -22,13 +22,13 @@ public class LensDetail {
     @JsonPropertyDescription("[文章:post,评论:comment,转载:mirror]")
     private String pubType;
     @JsonPropertyDescription("作者id")
-    private String proId;
+    private Integer proId;
     @JsonPropertyDescription("发布内容id")
-    private String pubId;
+    private Integer pubId;
     @JsonPropertyDescription("原创作者id")
-    private String rootProId;
+    private Integer rootProId;
     @JsonPropertyDescription("原创内容id")
-    private String rootPubId;
+    private Integer rootPubId;
     @JsonPropertyDescription("收费模式[1:收费,2:限数,3:限时,4:限数限时]")
     private Integer feeType;
     @JsonPropertyDescription("收款方类型[0:原创,1:转载]")
