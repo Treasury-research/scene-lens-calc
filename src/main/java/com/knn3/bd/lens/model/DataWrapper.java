@@ -3,6 +3,7 @@ package com.knn3.bd.lens.model;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knn3.bd.lens.cons.Cons;
@@ -16,6 +17,7 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -41,7 +43,7 @@ public class DataWrapper {
                 this.data.put("currency", this.data.remove("currency").asText().toLowerCase(Locale.ROOT));
                 return;
             case Cons.PUBLICATION:
-                String collectModule = this.data.get("collectModule").asText();
+                String collectModule = Optional.ofNullable(this.data.get("collectModule")).map(JsonNode::asText).orElse(null);
                 // 不收费的数据,过滤掉
                 if (!Cons.FEE_VALUE_MAP.containsKey(collectModule)) this.data = null;
                 else {
