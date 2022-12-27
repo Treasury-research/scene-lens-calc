@@ -62,10 +62,10 @@ public class LensDetailJoinFunction extends KeyedCoProcessFunction<String, LensC
     public void processElement1(LensCollect lensCollect, KeyedCoProcessFunction<String, LensCollect, LensPublication, LensDetail>.Context context, Collector<LensDetail> collector) throws Exception {
         LensDetail detail = new LensDetail();
         detail.setCollector(lensCollect.getCollector());
-        detail.setProId(lensCollect.getProfileId());
-        detail.setPubId(lensCollect.getPubId());
-        detail.setRootProId(lensCollect.getRootProfileId());
-        detail.setRootPubId(lensCollect.getRootPubId());
+        detail.setProId(Integer.parseInt(lensCollect.getProfileId()));
+        detail.setPubId(Integer.parseInt(lensCollect.getPubId()));
+        detail.setRootProId(Integer.parseInt(lensCollect.getRootProfileId()));
+        detail.setRootPubId(Integer.parseInt(lensCollect.getRootPubId()));
         detail.setRecipientType((detail.getRootProId().equals(detail.getProId()) && detail.getRootPubId().equals(detail.getPubId())) ? 0 : 1);
         detail.setBlkNum(lensCollect.getBlockNumber());
         detail.setHash(lensCollect.getTransactionHash());
