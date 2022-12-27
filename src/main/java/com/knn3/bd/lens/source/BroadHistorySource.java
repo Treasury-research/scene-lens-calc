@@ -61,7 +61,7 @@ public class BroadHistorySource extends RichSourceFunction<DataWrapper> {
                     node.put("transactionIndex", Integer.parseInt(x[1].toString()));
                     node.put("newTreasuryFee", x[2].toString());
                     node.put("timestamp", Long.parseLong(x[3].toString()));
-                    wrapper.setType(Cons.TREASURY);
+                    wrapper.setType(Cons.TREASURY_FEE);
                     wrapper.setData(node);
                     return wrapper;
                 }).collect(Collectors.toList()).forEach(sourceContext::collect);
