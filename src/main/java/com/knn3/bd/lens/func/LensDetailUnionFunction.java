@@ -123,6 +123,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             modelList.add(model);
             modelList.sort(Comparator.comparing(x -> x.getTimestamp() * -1));
             context.getBroadcastState(this.broadcastDescriptor).put(type, modelList);
+            log.info("type={},modelList={}", type, modelList);
         } catch (Exception e) {
             log.error("LensDetailUnionFunction,data={}", wrapper);
             log.error("LensDetailUnionFunction", e);
