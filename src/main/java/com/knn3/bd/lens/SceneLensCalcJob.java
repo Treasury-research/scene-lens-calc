@@ -1,25 +1,33 @@
 package com.knn3.bd.lens;
 
 import com.knn3.bd.lens.cons.Cons;
+import com.knn3.bd.lens.func.LensDetailJoinFunction;
+import com.knn3.bd.lens.func.LensDetailUnionFunction;
 import com.knn3.bd.lens.func.LensDupFunction;
 import com.knn3.bd.lens.func.LensMapFunction;
-import com.knn3.bd.lens.model.DataWrapper;
-import com.knn3.bd.lens.model.LensCollect;
-import com.knn3.bd.lens.model.LensPublication;
+import com.knn3.bd.lens.model.*;
+import com.knn3.bd.lens.source.HistorySource;
 import com.knn3.bd.rt.Job;
-import com.knn3.bd.rt.connector.fs.FsSink;
-import com.knn3.bd.rt.connector.fs.adapt.FsModel;
 import com.knn3.bd.rt.connector.kafka.KafkaSchema;
 import com.knn3.bd.rt.connector.kafka.SourceModel;
 import com.knn3.bd.rt.model.EnvConf;
-import com.knn3.bd.rt.utils.Json;
+import com.knn3.bd.rt.service.JdbcService;
+import com.knn3.bd.rt.utils.JDBCUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
+import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
+import org.apache.flink.connector.jdbc.JdbcSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.OutputTag;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -75,136 +83,133 @@ public class SceneLensCalcJob {
         OutputTag<LensCollect> collectTag = new OutputTag<LensCollect>("polygon_lens_collect") {
         };
 
-        // MapStateDescriptor<String, List<LensBroadModel>> broadcastDescriptor = new MapStateDescriptor<>("BroadcastDescriptor", TypeInformation.of(String.class), TypeInformation.of(new TypeHint<List<LensBroadModel>>() {
-        // }));
+        MapStateDescriptor<String, List<LensBroadModel>> broadcastDescriptor = new MapStateDescriptor<>("BroadcastDescriptor", TypeInformation.of(String.class), TypeInformation.of(new TypeHint<List<LensBroadModel>>() {
+        }));
 
         /**
          * jdbc参数
          */
-        // JdbcExecutionOptions jdbcExecutionOptions = JdbcExecutionOptions.builder()
-        //         .withBatchSize(5000)
-        //         .withBatchIntervalMs(20000)
-        //         .withMaxRetries(5)
-        //         .build();
-        // JdbcConnectionOptions pgJdbcConnectionOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-        //         .withUrl(pgUrl)
-        //         .withDriverName(JDBCUtils.POSTGRES)
-        //         .withUsername(pgUsername)
-        //         .withPassword(pgPassword)
-        //         .build();
-        // JdbcConnectionOptions tidbJdbcConnectionOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-        //         .withUrl(tidbUrl)
-        //         .withDriverName(JDBCUtils.MYSQL)
-        //         .withUsername(tidbUsername)
-        //         .withPassword(tidbPassword)
-        //         .build();
+        JdbcExecutionOptions jdbcExecutionOptions = JdbcExecutionOptions.builder()
+                .withBatchSize(5000)
+                .withBatchIntervalMs(20000)
+                .withMaxRetries(5)
+                .build();
+        JdbcConnectionOptions pgJdbcConnectionOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+                .withUrl(pgUrl)
+                .withDriverName(JDBCUtils.POSTGRES)
+                .withUsername(pgUsername)
+                .withPassword(pgPassword)
+                .build();
+        JdbcConnectionOptions tidbJdbcConnectionOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+                .withUrl(tidbUrl)
+                .withDriverName(JDBCUtils.MYSQL)
+                .withUsername(tidbUsername)
+                .withPassword(tidbPassword)
+                .build();
 
 
         SingleOutputStreamOperator<DataWrapper> dupDs = env.fromSource(lensSource, WatermarkStrategy.noWatermarks(), "LensSource").name("LensSource").uid("LensSource").setParallelism(sourceP)
+                .union(env.addSource(new HistorySource()).name("HistorySource").uid("HistorySource"))
                 .flatMap(new LensMapFunction()).name("LensMap").uid("LensMap")
                 .keyBy(x -> x.f0)
                 .process(new LensDupFunction(pubTag, collectTag)).name("LensDup").uid("LensDup");
-        dupDs.getSideOutput(collectTag)
-                .map(x -> new FsModel(Cons.COLLECT, String.format("key=%s,value=%s", String.join(Cons.SEP, x.getRootProfileId(), x.getRootPubId()), Json.MAPPER.writeValueAsString(x))))
-                .union(dupDs.getSideOutput(pubTag)
-                        .map(x -> new FsModel(Cons.PUBLICATION, String.format("key=%s,value=%s", String.join(Cons.SEP, x.getProfileId(), x.getPubId()), Json.MAPPER.writeValueAsString(x))))
-                )
-                .sinkTo(FsSink.modelSink("s3://knn3-flink/dev/mid/tmp/SceneLensCalcJob/")).name("PublicationSink").uid("PublicationSink");
-
-        // SingleOutputStreamOperator<LensDetail> outDs = dupDs.getSideOutput(collectTag).keyBy((KeySelector<LensCollect, String>) value -> String.join(Cons.SEP, value.getRootProfileId(), value.getRootPubId()))
-        //         .connect(dupDs.getSideOutput(pubTag).keyBy((KeySelector<LensPublication, String>) value -> String.join(Cons.SEP, value.getProfileId(), value.getPubId())))
-        //         .process(new LensDetailJoinFunction()).name("Join").uid("Join")
-        //         .connect(
-        //                 env.addSource(new BroadHistorySource()).name("BroadHistory").uid("BroadHistory").setParallelism(1)
-        //                         .union(dupDs)
-        //                         .broadcast(broadcastDescriptor)
+        // dupDs.getSideOutput(collectTag)
+        //         .map(x -> new FsModel(Cons.COLLECT, String.format("key=%s,value=%s", String.join(Cons.SEP, x.getRootProfileId(), x.getRootPubId()), Json.MAPPER.writeValueAsString(x))))
+        //         .union(dupDs.getSideOutput(pubTag)
+        //                 .map(x -> new FsModel(Cons.PUBLICATION, String.format("key=%s,value=%s", String.join(Cons.SEP, x.getProfileId(), x.getPubId()), Json.MAPPER.writeValueAsString(x))))
         //         )
-        //         .process(new LensDetailUnionFunction(broadcastDescriptor)).name("BroadUnion").uid("BroadUnion");
-        //
-        // outDs.addSink(JdbcSink.sink(
-        //         PG_INSERT,
-        //         (statement, lens) -> {
-        //             JdbcService.setString(1, statement, lens.getCollector());
-        //             JdbcService.setString(2, statement, lens.getPubType());
-        //             JdbcService.setInt(3, statement, lens.getProId());
-        //             JdbcService.setInt(4, statement, lens.getPubId());
-        //             JdbcService.setInt(5, statement, lens.getRootProId());
-        //             JdbcService.setInt(6, statement, lens.getRootPubId());
-        //             JdbcService.setInt(7, statement, lens.getFeeType());
-        //             JdbcService.setInt(8, statement, lens.getRecipientType());
-        //             JdbcService.setObject(9, statement, lens.getBlkNum());
-        //             JdbcService.setString(10, statement, lens.getHash());
-        //             JdbcService.setInt(11, statement, lens.getLogIdx());
-        //             JdbcService.setInt(12, statement, lens.getIdx());
-        //             JdbcService.setString(13, statement, lens.getMirAddr());
-        //             JdbcService.setString(14, statement, lens.getTimestamp());
-        //             JdbcService.setString(15, statement, lens.getAmount());
-        //             JdbcService.setString(16, statement, lens.getCurrency());
-        //             JdbcService.setObject(17, statement, lens.getReferralFee());
-        //             JdbcService.setString(18, statement, lens.getOriginAddr());
-        //             JdbcService.setInt(19, statement, lens.getDecimals());
-        //             JdbcService.setString(20, statement, lens.getPlatAddr());
-        //             JdbcService.setObject(21, statement, lens.getPlatRate());
-        //             JdbcService.setDouble(22, statement, lens.getPlatAmount());
-        //             JdbcService.setDouble(23, statement, lens.getMirAmount());
-        //             JdbcService.setDouble(24, statement, lens.getOriginAmount());
-        //         },
-        //         jdbcExecutionOptions,
-        //         pgJdbcConnectionOptions
-        // )).name("SinkPg").uid("SinkPg");
-        // outDs.addSink(JdbcSink.sink(
-        //         TIDB_INSERT,
-        //         (statement, lens) -> {
-        //             JdbcService.setString(1, statement, lens.getCollector());
-        //             JdbcService.setString(2, statement, lens.getPubType());
-        //             JdbcService.setInt(3, statement, lens.getProId());
-        //             JdbcService.setInt(4, statement, lens.getPubId());
-        //             JdbcService.setInt(5, statement, lens.getRootProId());
-        //             JdbcService.setInt(6, statement, lens.getRootPubId());
-        //             JdbcService.setInt(7, statement, lens.getFeeType());
-        //             JdbcService.setInt(8, statement, lens.getRecipientType());
-        //             JdbcService.setObject(9, statement, lens.getBlkNum());
-        //             JdbcService.setString(10, statement, lens.getHash());
-        //             JdbcService.setInt(11, statement, lens.getLogIdx());
-        //             JdbcService.setInt(12, statement, lens.getIdx());
-        //             JdbcService.setString(13, statement, lens.getMirAddr());
-        //             JdbcService.setString(14, statement, lens.getTimestamp());
-        //             JdbcService.setString(15, statement, lens.getAmount());
-        //             JdbcService.setString(16, statement, lens.getCurrency());
-        //             JdbcService.setObject(17, statement, lens.getReferralFee());
-        //             JdbcService.setString(18, statement, lens.getOriginAddr());
-        //             JdbcService.setInt(19, statement, lens.getDecimals());
-        //             JdbcService.setString(20, statement, lens.getPlatAddr());
-        //             JdbcService.setObject(21, statement, lens.getPlatRate());
-        //             JdbcService.setDouble(22, statement, lens.getPlatAmount());
-        //             JdbcService.setDouble(23, statement, lens.getMirAmount());
-        //             JdbcService.setDouble(24, statement, lens.getOriginAmount());
-        //
-        //             JdbcService.setString(25, statement, lens.getCollector());
-        //             JdbcService.setString(26, statement, lens.getPubType());
-        //             JdbcService.setInt(27, statement, lens.getPubId());
-        //             JdbcService.setInt(28, statement, lens.getRootProId());
-        //             JdbcService.setInt(29, statement, lens.getRootPubId());
-        //             JdbcService.setInt(30, statement, lens.getFeeType());
-        //             JdbcService.setInt(31, statement, lens.getRecipientType());
-        //             JdbcService.setInt(32, statement, lens.getLogIdx());
-        //             JdbcService.setInt(33, statement, lens.getIdx());
-        //             JdbcService.setString(34, statement, lens.getMirAddr());
-        //             JdbcService.setString(35, statement, lens.getTimestamp());
-        //             JdbcService.setString(36, statement, lens.getAmount());
-        //             JdbcService.setString(37, statement, lens.getCurrency());
-        //             JdbcService.setObject(38, statement, lens.getReferralFee());
-        //             JdbcService.setString(39, statement, lens.getOriginAddr());
-        //             JdbcService.setInt(40, statement, lens.getDecimals());
-        //             JdbcService.setString(41, statement, lens.getPlatAddr());
-        //             JdbcService.setObject(42, statement, lens.getPlatRate());
-        //             JdbcService.setDouble(43, statement, lens.getPlatAmount());
-        //             JdbcService.setDouble(44, statement, lens.getMirAmount());
-        //             JdbcService.setDouble(45, statement, lens.getOriginAmount());
-        //         },
-        //         jdbcExecutionOptions,
-        //         tidbJdbcConnectionOptions
-        // )).name("SinkTidb").uid("SinkTidb");
+        //         .sinkTo(FsSink.modelSink("s3://knn3-flink/dev/mid/tmp/SceneLensCalcJob/")).name("PublicationSink").uid("PublicationSink");
+
+        SingleOutputStreamOperator<LensDetail> outDs = dupDs.getSideOutput(collectTag).keyBy((KeySelector<LensCollect, String>) value -> String.join(Cons.SEP, value.getRootProfileId(), value.getRootPubId()))
+                .connect(dupDs.getSideOutput(pubTag).keyBy((KeySelector<LensPublication, String>) value -> String.join(Cons.SEP, value.getProfileId(), value.getPubId())))
+                .process(new LensDetailJoinFunction()).name("Join").uid("Join")
+                .connect(dupDs.broadcast(broadcastDescriptor))
+                .process(new LensDetailUnionFunction(broadcastDescriptor)).name("BroadUnion").uid("BroadUnion");
+
+        outDs.addSink(JdbcSink.sink(
+                PG_INSERT,
+                (statement, lens) -> {
+                    JdbcService.setString(1, statement, lens.getCollector());
+                    JdbcService.setString(2, statement, lens.getPubType());
+                    JdbcService.setInt(3, statement, lens.getProId());
+                    JdbcService.setInt(4, statement, lens.getPubId());
+                    JdbcService.setInt(5, statement, lens.getRootProId());
+                    JdbcService.setInt(6, statement, lens.getRootPubId());
+                    JdbcService.setInt(7, statement, lens.getFeeType());
+                    JdbcService.setInt(8, statement, lens.getRecipientType());
+                    JdbcService.setObject(9, statement, lens.getBlkNum());
+                    JdbcService.setString(10, statement, lens.getHash());
+                    JdbcService.setInt(11, statement, lens.getLogIdx());
+                    JdbcService.setInt(12, statement, lens.getIdx());
+                    JdbcService.setString(13, statement, lens.getMirAddr());
+                    JdbcService.setString(14, statement, lens.getTimestamp());
+                    JdbcService.setString(15, statement, lens.getAmount());
+                    JdbcService.setString(16, statement, lens.getCurrency());
+                    JdbcService.setObject(17, statement, lens.getReferralFee());
+                    JdbcService.setString(18, statement, lens.getOriginAddr());
+                    JdbcService.setInt(19, statement, lens.getDecimals());
+                    JdbcService.setString(20, statement, lens.getPlatAddr());
+                    JdbcService.setObject(21, statement, lens.getPlatRate());
+                    JdbcService.setDouble(22, statement, lens.getPlatAmount());
+                    JdbcService.setDouble(23, statement, lens.getMirAmount());
+                    JdbcService.setDouble(24, statement, lens.getOriginAmount());
+                },
+                jdbcExecutionOptions,
+                pgJdbcConnectionOptions
+        )).name("SinkPg").uid("SinkPg");
+        outDs.addSink(JdbcSink.sink(
+                TIDB_INSERT,
+                (statement, lens) -> {
+                    JdbcService.setString(1, statement, lens.getCollector());
+                    JdbcService.setString(2, statement, lens.getPubType());
+                    JdbcService.setInt(3, statement, lens.getProId());
+                    JdbcService.setInt(4, statement, lens.getPubId());
+                    JdbcService.setInt(5, statement, lens.getRootProId());
+                    JdbcService.setInt(6, statement, lens.getRootPubId());
+                    JdbcService.setInt(7, statement, lens.getFeeType());
+                    JdbcService.setInt(8, statement, lens.getRecipientType());
+                    JdbcService.setObject(9, statement, lens.getBlkNum());
+                    JdbcService.setString(10, statement, lens.getHash());
+                    JdbcService.setInt(11, statement, lens.getLogIdx());
+                    JdbcService.setInt(12, statement, lens.getIdx());
+                    JdbcService.setString(13, statement, lens.getMirAddr());
+                    JdbcService.setString(14, statement, lens.getTimestamp());
+                    JdbcService.setString(15, statement, lens.getAmount());
+                    JdbcService.setString(16, statement, lens.getCurrency());
+                    JdbcService.setObject(17, statement, lens.getReferralFee());
+                    JdbcService.setString(18, statement, lens.getOriginAddr());
+                    JdbcService.setInt(19, statement, lens.getDecimals());
+                    JdbcService.setString(20, statement, lens.getPlatAddr());
+                    JdbcService.setObject(21, statement, lens.getPlatRate());
+                    JdbcService.setDouble(22, statement, lens.getPlatAmount());
+                    JdbcService.setDouble(23, statement, lens.getMirAmount());
+                    JdbcService.setDouble(24, statement, lens.getOriginAmount());
+
+                    JdbcService.setString(25, statement, lens.getCollector());
+                    JdbcService.setString(26, statement, lens.getPubType());
+                    JdbcService.setInt(27, statement, lens.getPubId());
+                    JdbcService.setInt(28, statement, lens.getRootProId());
+                    JdbcService.setInt(29, statement, lens.getRootPubId());
+                    JdbcService.setInt(30, statement, lens.getFeeType());
+                    JdbcService.setInt(31, statement, lens.getRecipientType());
+                    JdbcService.setInt(32, statement, lens.getLogIdx());
+                    JdbcService.setInt(33, statement, lens.getIdx());
+                    JdbcService.setString(34, statement, lens.getMirAddr());
+                    JdbcService.setString(35, statement, lens.getTimestamp());
+                    JdbcService.setString(36, statement, lens.getAmount());
+                    JdbcService.setString(37, statement, lens.getCurrency());
+                    JdbcService.setObject(38, statement, lens.getReferralFee());
+                    JdbcService.setString(39, statement, lens.getOriginAddr());
+                    JdbcService.setInt(40, statement, lens.getDecimals());
+                    JdbcService.setString(41, statement, lens.getPlatAddr());
+                    JdbcService.setObject(42, statement, lens.getPlatRate());
+                    JdbcService.setDouble(43, statement, lens.getPlatAmount());
+                    JdbcService.setDouble(44, statement, lens.getMirAmount());
+                    JdbcService.setDouble(45, statement, lens.getOriginAmount());
+                },
+                jdbcExecutionOptions,
+                tidbJdbcConnectionOptions
+        )).name("SinkTidb").uid("SinkTidb");
 
 
         env.execute(jobName);
