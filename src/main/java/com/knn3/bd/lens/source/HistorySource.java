@@ -30,7 +30,7 @@ public class HistorySource extends RichSourceFunction<SourceModel> {
         String password = confMap.get(EnvConf.PG_PASSWORD);
         JDBCUtils.loadDriver(JDBCUtils.POSTGRES);
         QueryRunner qr = new QueryRunner(JDBCUtils.getDataSource(url, username, password));
-        qr.query("select currency,decimals,timestamp from polygon_lens_currency", new ArrayListHandler())
+        qr.query("select currency,decimals,\"transactionHash\",\"logIndex\",timestamp from polygon_lens_currency", new ArrayListHandler())
                 .stream().map(x -> {
                     try {
                         SourceModel sourceModel = new SourceModel();
@@ -38,7 +38,9 @@ public class HistorySource extends RichSourceFunction<SourceModel> {
                         ObjectNode node = Json.MAPPER.createObjectNode();
                         node.put("currency", x[0].toString());
                         node.put("decimals", x[1].toString());
-                        node.put("timestamp", x[2].toString());
+                        node.put("transactionHash", x[2].toString());
+                        node.put("logIndex", x[3].toString());
+                        node.put("timestamp", x[4].toString());
                         wrapper.setType(Cons.CURRENCY);
                         wrapper.setData(node);
                         sourceModel.setValue(Json.MAPPER.writeValueAsString(wrapper));
@@ -49,7 +51,7 @@ public class HistorySource extends RichSourceFunction<SourceModel> {
                     return null;
                 }).collect(Collectors.toList()).forEach(sourceContext::collect);
 
-        qr.query("select \"blockNumber\",\"transactionIndex\",\"newTreasury\",timestamp as treasury from polygon_lens_treasury", new ArrayListHandler())
+        qr.query("select \"blockNumber\",\"transactionIndex\",\"newTreasury\",\"transactionHash\",\"logIndex\",timestamp as treasury from polygon_lens_treasury", new ArrayListHandler())
                 .stream().map(x -> {
                     try {
                         SourceModel sourceModel = new SourceModel();
@@ -58,7 +60,9 @@ public class HistorySource extends RichSourceFunction<SourceModel> {
                         node.put("blockNumber", Long.parseLong(x[0].toString()));
                         node.put("transactionIndex", Integer.parseInt(x[1].toString()));
                         node.put("newTreasury", x[2].toString());
-                        node.put("timestamp", Long.parseLong(x[3].toString()));
+                        node.put("transactionHash", x[3].toString());
+                        node.put("logIndex", x[4].toString());
+                        node.put("timestamp", Long.parseLong(x[5].toString()));
                         wrapper.setType(Cons.TREASURY);
                         wrapper.setData(node);
                         sourceModel.setValue(Json.MAPPER.writeValueAsString(wrapper));
@@ -69,7 +73,7 @@ public class HistorySource extends RichSourceFunction<SourceModel> {
                     return null;
                 }).collect(Collectors.toList()).forEach(sourceContext::collect);
 
-        qr.query("select \"blockNumber\",\"transactionIndex\",\"newTreasuryFee\",timestamp as treasury from polygon_lens_treasury_fee", new ArrayListHandler())
+        qr.query("select \"blockNumber\",\"transactionIndex\",\"newTreasuryFee\",\"transactionHash\",\"logIndex\",timestamp as treasury from polygon_lens_treasury_fee", new ArrayListHandler())
                 .stream().map(x -> {
                     try {
                         SourceModel sourceModel = new SourceModel();
@@ -78,7 +82,9 @@ public class HistorySource extends RichSourceFunction<SourceModel> {
                         node.put("blockNumber", Long.parseLong(x[0].toString()));
                         node.put("transactionIndex", Integer.parseInt(x[1].toString()));
                         node.put("newTreasuryFee", x[2].toString());
-                        node.put("timestamp", Long.parseLong(x[3].toString()));
+                        node.put("transactionHash", x[3].toString());
+                        node.put("logIndex", x[4].toString());
+                        node.put("timestamp", Long.parseLong(x[5].toString()));
                         wrapper.setType(Cons.TREASURY_FEE);
                         wrapper.setData(node);
                         sourceModel.setValue(Json.MAPPER.writeValueAsString(wrapper));
