@@ -7,6 +7,8 @@ import com.knn3.bd.lens.model.DataWrapper;
 import com.knn3.bd.lens.model.LensCollect;
 import com.knn3.bd.lens.model.LensPublication;
 import com.knn3.bd.rt.Job;
+import com.knn3.bd.rt.connector.fs.FsSink;
+import com.knn3.bd.rt.connector.fs.adapt.FsModel;
 import com.knn3.bd.rt.connector.kafka.KafkaSchema;
 import com.knn3.bd.rt.connector.kafka.SourceModel;
 import com.knn3.bd.rt.model.EnvConf;
@@ -103,12 +105,11 @@ public class SceneLensCalcJob {
                 .keyBy(x -> x.f0)
                 .process(new LensDupFunction(pubTag, collectTag)).name("LensDup").uid("LensDup");
         dupDs.getSideOutput(collectTag)
-                .map(x -> String.format("key=%s,value=%s", String.join(Cons.SEP, x.getRootProfileId(), x.getRootPubId()), Json.MAPPER.writeValueAsString(x)))
-                .print();
-
-        dupDs.getSideOutput(pubTag)
-                .map(x -> String.format("key=%s,value=%s", String.join(Cons.SEP, x.getProfileId(), x.getPubId()), Json.MAPPER.writeValueAsString(x)))
-                .print();
+                .map(x -> new FsModel(Cons.COLLECT, String.format("key=%s,value=%s", String.join(Cons.SEP, x.getRootProfileId(), x.getRootPubId()), Json.MAPPER.writeValueAsString(x))))
+                .union(dupDs.getSideOutput(pubTag)
+                        .map(x -> new FsModel(Cons.PUBLICATION, String.format("key=%s,value=%s", String.join(Cons.SEP, x.getProfileId(), x.getPubId()), Json.MAPPER.writeValueAsString(x))))
+                )
+                .sinkTo(FsSink.modelSink("s3://knn3-flink/dev/mid/tmp/SceneLensCalcJob/")).name("PublicationSink").uid("PublicationSink");
 
         // SingleOutputStreamOperator<LensDetail> outDs = dupDs.getSideOutput(collectTag).keyBy((KeySelector<LensCollect, String>) value -> String.join(Cons.SEP, value.getRootProfileId(), value.getRootPubId()))
         //         .connect(dupDs.getSideOutput(pubTag).keyBy((KeySelector<LensPublication, String>) value -> String.join(Cons.SEP, value.getProfileId(), value.getPubId())))
