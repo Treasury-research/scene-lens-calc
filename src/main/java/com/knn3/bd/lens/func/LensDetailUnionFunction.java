@@ -58,43 +58,48 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
 
     @Override
     public void processElement(LensDetail detail, BroadcastProcessFunction<LensDetail, DataWrapper, LensDetail>.ReadOnlyContext context, Collector<LensDetail> collector) throws Exception {
-        String currency = detail.getCurrency();
-        Long blkNum = detail.getBlkNum();
-        Integer idx = detail.getIdx();
-        detail.setDecimals(
-                context.getBroadcastState(this.broadcastDescriptor).get(Cons.CURRENCY)
-                        .stream()
-                        .filter(currency::equals)
-                        .map(LensBroadModel::getDecimals)
-                        .collect(Collectors.toList()).get(0)
-        );
+        try {
+            String currency = detail.getCurrency();
+            Long blkNum = detail.getBlkNum();
+            Integer idx = detail.getIdx();
+            detail.setDecimals(
+                    context.getBroadcastState(this.broadcastDescriptor).get(Cons.CURRENCY)
+                            .stream()
+                            .filter(currency::equals)
+                            .map(LensBroadModel::getDecimals)
+                            .collect(Collectors.toList()).get(0)
+            );
 
-        // 平台地址
-        for (LensBroadModel model : context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY)) {
-            Long blockNumber = model.getBlockNumber();
-            Integer index = model.getTransactionIndex();
-            if (blkNum > blockNumber || (blkNum.equals(blockNumber) && idx >= index)) {
-                detail.setPlatAddr(model.getNewTreasury());
-                break;
+            // 平台地址
+            for (LensBroadModel model : context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY)) {
+                Long blockNumber = model.getBlockNumber();
+                Integer index = model.getTransactionIndex();
+                if (blkNum > blockNumber || (blkNum.equals(blockNumber) && idx >= index)) {
+                    detail.setPlatAddr(model.getNewTreasury());
+                    break;
+                }
             }
-        }
 
-        // 平台费用
-        for (LensBroadModel model : context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY_FEE)) {
-            Long blockNumber = model.getBlockNumber();
-            Integer index = model.getTransactionIndex();
-            if (blkNum > blockNumber || (blkNum.equals(blockNumber) && idx >= index)) {
-                detail.setPlatRate(model.getNewTreasuryFee());
-                break;
+            // 平台费用
+            for (LensBroadModel model : context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY_FEE)) {
+                Long blockNumber = model.getBlockNumber();
+                Integer index = model.getTransactionIndex();
+                if (blkNum > blockNumber || (blkNum.equals(blockNumber) && idx >= index)) {
+                    detail.setPlatRate(model.getNewTreasuryFee());
+                    break;
+                }
             }
+            // 计算三种金额
+            double amount = Double.parseDouble(new StringBuilder().append(detail.getAmount()).insert(detail.getAmount().length() - detail.getDecimals(), ".").toString());
+            detail.setPlatAmount(amount * detail.getPlatAmount() / 10000);
+            if (detail.getRecipientType() == 1) {
+                detail.setMirAmount(amount * detail.getReferralFee().longValue() / 10000);
+            }
+            detail.setOriginAmount(amount - detail.getPlatAmount() - detail.getMirAmount());
+        } catch (Exception e) {
+            log.error("LensDetailUnionFunction,processElement,data={}", detail);
+            log.error("LensDetailUnionFunction,processElement", e);
         }
-        // 计算三种金额
-        double amount = Double.parseDouble(new StringBuilder().append(detail.getAmount()).insert(detail.getAmount().length() - detail.getDecimals(), ".").toString());
-        detail.setPlatAmount(amount * detail.getPlatAmount() / 10000);
-        if (detail.getRecipientType() == 1) {
-            detail.setMirAmount(amount * detail.getReferralFee().longValue() / 10000);
-        }
-        detail.setOriginAmount(amount - detail.getPlatAmount() - detail.getMirAmount());
     }
 
     @Override
