@@ -95,7 +95,7 @@ public class HistorySource extends RichSourceFunction<SourceModel> {
                     return null;
                 }).collect(Collectors.toList()).forEach(sourceContext::collect);
 
-        qr.query("select \"profileId\",\"pubId\",\"collectModuleReturnData\",type,\"collectModule\",\"transactionHash\",\"logIndex\" from polygon_lens_publication where \"collectModule\" in ('0x1292e6df9a4697daafddbd61d5a7545a634af33d','0xef13efa565fb29cd55ecf3de2beb6c69bd988212','0xbf4e6c28d7f37c867ce62cf6ccb9efa4c7676f7f','0x7b94f57652cc1e5631532904a4a038435694636b')", new ArrayListHandler())
+        qr.query("select \"profileId\",\"pubId\",\"collectModuleReturnData\",type,\"collectModule\" from polygon_lens_publication where \"collectModule\" in ('0x1292e6df9a4697daafddbd61d5a7545a634af33d','0xef13efa565fb29cd55ecf3de2beb6c69bd988212','0xbf4e6c28d7f37c867ce62cf6ccb9efa4c7676f7f','0x7b94f57652cc1e5631532904a4a038435694636b')", new ArrayListHandler())
                 .stream().map(x -> {
                     try {
                         SourceModel sourceModel = new SourceModel();
@@ -106,8 +106,6 @@ public class HistorySource extends RichSourceFunction<SourceModel> {
                         node.put("collectModuleReturnData", x[2].toString());
                         node.put("type", x[3].toString());
                         node.put("collectModule", x[4].toString());
-                        node.put("transactionHash", x[5].toString());
-                        node.put("logIndex", x[6].toString());
                         wrapper.setType(Cons.PUBLICATION);
                         wrapper.setData(node);
                         sourceModel.setValue(Json.MAPPER.writeValueAsString(wrapper));
