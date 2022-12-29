@@ -16,6 +16,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * @Author zhouyong
@@ -94,7 +95,8 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
                 }
             }
             // 计算三种金额
-            double amount = Double.parseDouble(new StringBuilder().append(detail.getAmount()).insert(detail.getAmount().length() - detail.getDecimals(), ".").toString());
+            String amountStr = (detail.getAmount().length() - detail.getDecimals() <= 0 ? String.join("", IntStream.range(0, detail.getDecimals() + 1 - detail.getAmount().length()).mapToObj(x -> "0").collect(Collectors.toList())) : "") + detail.getAmount();
+            double amount = Double.parseDouble(new StringBuilder().append(amountStr).insert(amountStr.length() - detail.getDecimals(), ".").toString());
             detail.setPlatAmount(amount * detail.getPlatRate() / 10000);
             if (detail.getRecipientType() == 1) {
                 detail.setMirAmount(amount * detail.getReferralFee().longValue() / 10000);
