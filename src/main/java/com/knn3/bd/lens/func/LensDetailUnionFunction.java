@@ -95,7 +95,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             }
             // 计算三种金额
             double amount = Double.parseDouble(new StringBuilder().append(detail.getAmount()).insert(detail.getAmount().length() - detail.getDecimals(), ".").toString());
-            detail.setPlatAmount(amount * detail.getPlatAmount() / 10000);
+            detail.setPlatAmount(amount * detail.getPlatRate() / 10000);
             if (detail.getRecipientType() == 1) {
                 detail.setMirAmount(amount * detail.getReferralFee().longValue() / 10000);
             }
