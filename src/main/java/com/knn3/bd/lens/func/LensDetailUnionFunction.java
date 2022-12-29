@@ -5,7 +5,6 @@ import com.knn3.bd.lens.cons.Cons;
 import com.knn3.bd.lens.model.DataWrapper;
 import com.knn3.bd.lens.model.LensBroadModel;
 import com.knn3.bd.lens.model.LensDetail;
-import com.knn3.bd.rt.utils.Json;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.streaming.api.functions.co.BroadcastProcessFunction;
@@ -64,7 +63,6 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             String currency = detail.getCurrency();
             Long blkNum = detail.getBlkNum();
             Integer idx = detail.getIdx();
-            log.info("{}={}", Cons.CURRENCY, context.getBroadcastState(this.broadcastDescriptor).get(Cons.CURRENCY));
             detail.setDecimals(
                     context.getBroadcastState(this.broadcastDescriptor).get(Cons.CURRENCY)
                             .stream()
@@ -74,7 +72,6 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             );
 
             // 平台地址
-            log.info("{}={}", Cons.TREASURY, context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY));
             for (LensBroadModel model : context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY)) {
                 Long blockNumber = model.getBlockNumber();
                 Integer index = model.getTransactionIndex();
@@ -85,7 +82,6 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             }
 
             // 平台费用
-            log.info("{}={}", Cons.TREASURY_FEE, context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY_FEE));
             for (LensBroadModel model : context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY_FEE)) {
                 Long blockNumber = model.getBlockNumber();
                 Integer index = model.getTransactionIndex();
@@ -100,6 +96,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             detail.setPlatAmount(amount * detail.getPlatRate() / 10000);
             detail.setMirAmount(detail.getRecipientType() == 1 ? amount * detail.getReferralFee().longValue() / 10000 : 0);
             detail.setOriginAmount(amount - detail.getPlatAmount() - detail.getMirAmount());
+            collector.collect(detail);
         } catch (Exception e) {
             log.error("LensDetailUnionFunction,processElement,data={}", detail);
             log.error("LensDetailUnionFunction,processElement", e);
@@ -127,7 +124,6 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             modelList.add(model);
             modelList.sort(Comparator.comparing(x -> x.getTimestamp() * -1));
             context.getBroadcastState(this.broadcastDescriptor).put(type, modelList);
-            log.info("type={},modelList={}", type, Json.MAPPER.writeValueAsString(modelList));
         } catch (Exception e) {
             log.error("LensDetailUnionFunction,data={}", wrapper);
             log.error("LensDetailUnionFunction", e);
