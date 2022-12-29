@@ -98,9 +98,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             String amountStr = (detail.getAmount().length() - detail.getDecimals() <= 0 ? String.join("", IntStream.range(0, detail.getDecimals() + 1 - detail.getAmount().length()).mapToObj(x -> "0").collect(Collectors.toList())) : "") + detail.getAmount();
             double amount = Double.parseDouble(new StringBuilder().append(amountStr).insert(amountStr.length() - detail.getDecimals(), ".").toString());
             detail.setPlatAmount(amount * detail.getPlatRate() / 10000);
-            if (detail.getRecipientType() == 1) {
-                detail.setMirAmount(amount * detail.getReferralFee().longValue() / 10000);
-            }
+            detail.setMirAmount(detail.getRecipientType() == 1 ? amount * detail.getReferralFee().longValue() / 10000 : 0);
             detail.setOriginAmount(amount - detail.getPlatAmount() - detail.getMirAmount());
         } catch (Exception e) {
             log.error("LensDetailUnionFunction,processElement,data={}", detail);
