@@ -136,8 +136,8 @@ public class SceneLensCalcJob {
                     JdbcService.setInt(11, statement, lens.getLogIdx());
                     JdbcService.setInt(12, statement, lens.getIdx());
                     JdbcService.setString(13, statement, lens.getMirAddr());
-                    JdbcService.setString(14, statement, lens.getTimestamp());
-                    JdbcService.setString(15, statement, lens.getAmount());
+                    JdbcService.setObject(14, statement, lens.getTimestamp());
+                    JdbcService.setDouble(15, statement, lens.getAmount());
                     JdbcService.setString(16, statement, lens.getCurrency());
                     JdbcService.setObject(17, statement, lens.getReferralFee());
                     JdbcService.setString(18, statement, lens.getOriginAddr());
@@ -167,8 +167,8 @@ public class SceneLensCalcJob {
                     JdbcService.setInt(11, statement, lens.getLogIdx());
                     JdbcService.setInt(12, statement, lens.getIdx());
                     JdbcService.setString(13, statement, lens.getMirAddr());
-                    JdbcService.setString(14, statement, lens.getTimestamp());
-                    JdbcService.setString(15, statement, lens.getAmount());
+                    JdbcService.setObject(14, statement, lens.getTimestamp());
+                    JdbcService.setDouble(15, statement, lens.getAmount());
                     JdbcService.setString(16, statement, lens.getCurrency());
                     JdbcService.setObject(17, statement, lens.getReferralFee());
                     JdbcService.setString(18, statement, lens.getOriginAddr());
@@ -189,8 +189,8 @@ public class SceneLensCalcJob {
                     JdbcService.setInt(32, statement, lens.getLogIdx());
                     JdbcService.setInt(33, statement, lens.getIdx());
                     JdbcService.setString(34, statement, lens.getMirAddr());
-                    JdbcService.setString(35, statement, lens.getTimestamp());
-                    JdbcService.setString(36, statement, lens.getAmount());
+                    JdbcService.setObject(35, statement, lens.getTimestamp());
+                    JdbcService.setDouble(36, statement, lens.getAmount());
                     JdbcService.setString(37, statement, lens.getCurrency());
                     JdbcService.setObject(38, statement, lens.getReferralFee());
                     JdbcService.setString(39, statement, lens.getOriginAddr());

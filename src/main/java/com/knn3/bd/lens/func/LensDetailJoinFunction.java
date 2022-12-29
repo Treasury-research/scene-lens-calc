@@ -25,7 +25,7 @@ public class LensDetailJoinFunction extends KeyedCoProcessFunction<String, LensC
 
     private static void of(LensDetail detail, LensPublication publication) {
         detail.setPubType(publication.getType());
-        detail.setAmount(publication.getAmount());
+        detail.setAmountStr(publication.getAmount());
         detail.setCurrency(publication.getCurrency());
         detail.setReferralFee(publication.getReferralFee());
 
@@ -72,7 +72,7 @@ public class LensDetailJoinFunction extends KeyedCoProcessFunction<String, LensC
         detail.setLogIdx(lensCollect.getLogIndex());
         detail.setIdx(lensCollect.getTransactionIndex());
         detail.setMirAddr(lensCollect.getReferral());
-        detail.setTimestamp(lensCollect.getTimestamp());
+        detail.setTimestamp(Long.parseLong(lensCollect.getTimestamp()));
         LensPublication publication = this.pubState.value();
         if (publication == null) {
             this.detailListState.add(detail);

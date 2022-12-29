@@ -44,9 +44,10 @@ public class LensDetail {
     @JsonPropertyDescription("提成[转载]的收款地址")
     private String mirAddr;
     @JsonPropertyDescription("明细时间")
-    private String timestamp;
+    private Long timestamp;
     @JsonPropertyDescription("金额")
-    private String amount;
+    private String amountStr;
+    private Double amount;
     @JsonPropertyDescription("货币类型[地址]")
     private String currency;
     @JsonPropertyDescription("提成[转载]收费比例")
