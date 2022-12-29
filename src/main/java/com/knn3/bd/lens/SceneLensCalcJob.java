@@ -8,11 +8,14 @@ import com.knn3.bd.lens.func.LensMapFunction;
 import com.knn3.bd.lens.model.*;
 import com.knn3.bd.lens.source.HistorySource;
 import com.knn3.bd.rt.Job;
+import com.knn3.bd.rt.connector.fs.FsSink;
+import com.knn3.bd.rt.connector.fs.adapt.FsModel;
 import com.knn3.bd.rt.connector.kafka.KafkaSchema;
 import com.knn3.bd.rt.connector.kafka.SourceModel;
 import com.knn3.bd.rt.model.EnvConf;
 import com.knn3.bd.rt.service.JdbcService;
 import com.knn3.bd.rt.utils.JDBCUtils;
+import com.knn3.bd.rt.utils.Json;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -120,11 +123,15 @@ public class SceneLensCalcJob {
         //         )
         //         .sinkTo(FsSink.modelSink("s3://knn3-flink/dev/mid/tmp/SceneLensCalcJob/")).name("PublicationSink").uid("PublicationSink");
 
-        SingleOutputStreamOperator<LensDetail> outDs = dupDs.getSideOutput(collectTag).keyBy((KeySelector<LensCollect, String>) value -> String.join(Cons.SEP, value.getRootProfileId(), value.getRootPubId()))
+        SingleOutputStreamOperator<LensDetail> joinDs = dupDs.getSideOutput(collectTag).keyBy((KeySelector<LensCollect, String>) value -> String.join(Cons.SEP, value.getRootProfileId(), value.getRootPubId()))
                 .connect(dupDs.getSideOutput(pubTag).keyBy((KeySelector<LensPublication, String>) value -> String.join(Cons.SEP, value.getProfileId(), value.getPubId())))
-                .process(new LensDetailJoinFunction()).name("Join").uid("Join")
+                .process(new LensDetailJoinFunction()).name("Join").uid("Join");
+        SingleOutputStreamOperator<LensDetail> outDs = joinDs
                 .connect(dupDs.broadcast(broadcastDescriptor))
                 .process(new LensDetailUnionFunction(broadcastDescriptor)).name("BroadUnion").uid("BroadUnion");
+
+        joinDs.map(x -> new FsModel("join", Json.MAPPER.writeValueAsString(x)))
+                .sinkTo(FsSink.modelSink("s3://knn3-flink/dev/mid/tmp/SceneLensCalcJob/")).name("PublicationSink").uid("PublicationSink");
 
         outDs.addSink(JdbcSink.sink(
                 PG_INSERT,

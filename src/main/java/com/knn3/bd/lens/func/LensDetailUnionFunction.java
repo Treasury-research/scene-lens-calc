@@ -5,6 +5,7 @@ import com.knn3.bd.lens.cons.Cons;
 import com.knn3.bd.lens.model.DataWrapper;
 import com.knn3.bd.lens.model.LensBroadModel;
 import com.knn3.bd.lens.model.LensDetail;
+import com.knn3.bd.rt.utils.Json;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.streaming.api.functions.co.BroadcastProcessFunction;
@@ -126,7 +127,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             modelList.add(model);
             modelList.sort(Comparator.comparing(x -> x.getTimestamp() * -1));
             context.getBroadcastState(this.broadcastDescriptor).put(type, modelList);
-            log.info("type={},modelList={}", type, modelList);
+            log.info("type={},modelList={}", type, Json.MAPPER.writeValueAsString(modelList));
         } catch (Exception e) {
             log.error("LensDetailUnionFunction,data={}", wrapper);
             log.error("LensDetailUnionFunction", e);
