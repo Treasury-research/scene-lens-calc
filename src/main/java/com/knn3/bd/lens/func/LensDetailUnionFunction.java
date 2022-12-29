@@ -67,7 +67,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             detail.setDecimals(
                     context.getBroadcastState(this.broadcastDescriptor).get(Cons.CURRENCY)
                             .stream()
-                            .filter(currency::equals)
+                            .filter(x -> currency.equals(x.getCurrency()))
                             .map(LensBroadModel::getDecimals)
                             .collect(Collectors.toList()).get(0)
             );
