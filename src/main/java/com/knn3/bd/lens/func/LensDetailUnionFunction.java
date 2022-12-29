@@ -62,6 +62,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             String currency = detail.getCurrency();
             Long blkNum = detail.getBlkNum();
             Integer idx = detail.getIdx();
+            log.info("{}={}", Cons.CURRENCY, context.getBroadcastState(this.broadcastDescriptor).get(Cons.CURRENCY));
             detail.setDecimals(
                     context.getBroadcastState(this.broadcastDescriptor).get(Cons.CURRENCY)
                             .stream()
@@ -71,6 +72,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             );
 
             // 平台地址
+            log.info("{}={}", Cons.TREASURY, context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY));
             for (LensBroadModel model : context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY)) {
                 Long blockNumber = model.getBlockNumber();
                 Integer index = model.getTransactionIndex();
@@ -81,6 +83,7 @@ public class LensDetailUnionFunction extends BroadcastProcessFunction<LensDetail
             }
 
             // 平台费用
+            log.info("{}={}", Cons.TREASURY_FEE, context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY_FEE));
             for (LensBroadModel model : context.getBroadcastState(this.broadcastDescriptor).get(Cons.TREASURY_FEE)) {
                 Long blockNumber = model.getBlockNumber();
                 Integer index = model.getTransactionIndex();
